@@ -15,4 +15,18 @@ let part1 () =
     |> Array.map (fun (l, r) -> abs (l - r))
     |> Array.sum
 
-printfn "Part 1: %A" (part1 ())
+// printfn "Part 1: %A" (part1 ())
+
+let part2 () =
+    let left, right = Array.unzip inputs
+    let rightCounts = 
+        Array.countBy id right 
+        |> Map.ofArray
+    left
+    |> Array.sumBy (fun n ->
+        let count = 
+            Map.tryFind n rightCounts
+            |> Option.defaultValue 0
+        n * count)
+
+printfn "Part 2: %A" (part2 ())

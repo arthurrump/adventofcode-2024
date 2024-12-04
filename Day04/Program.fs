@@ -1,42 +1,37 @@
-﻿open System.IO
+﻿open System
+open System.IO
 
 let wordSearch =
-    File.ReadAllLines("input.test.txt")
+    File.ReadAllLines("input.txt")
     |> Array.map (fun line -> line.ToCharArray())
     |> array2D
 
-let isValid (y, x) arr =
-    0 <= y && y < Array2D.length1 arr && 
-    0 <= x && x < Array2D.length2 arr
+let positionExists wordSearch (y, x) =
+    0 <= y && y < Array2D.length1 wordSearch &&
+    0 <= x && x < Array2D.length2 wordSearch
 
-let nextPos wordSearch (y, x) =
-    [ for dy = -1 to 1 do 
-        for dx = -1 to 1 do 
-            if not (dy = 0 && dx = 0) && isValid (y + dy, x + dx) wordSearch 
-            then (y + dy, x + dx) ]
-let rec searchWord (wordSearch: 'char array2d) word positionLists =
-    match word with
-    | char::word ->
-        positionLists 
-        |> List.collect (fun ((cY, cX)::positions) ->
-            if wordSearch[cY, cX] = char then 
-                nextPos wordSearch (cY, cX)
-                |> List.map (fun nextPos -> nextPos::(cX, cY)::positions)
-            else 
-                List.empty
-        )
-        |> searchWord wordSearch word
-    | [] ->
-        positionLists
-        |> List.map List.tail
-        |> List.distinct
+let directions =
+    [ for y = -1 to 1 do 
+        for x = -1 to 1 do 
+            if not (y = 0 && x = 0) then (y, x) ]
+
+let move (dy, dx) dist (y, x) =
+    (y + dy * dist, x + dx * dist)
+
+let wordsFromPosition wordLength (wordSearch: char array2d) (y, x) =
+    [ for dir in directions do
+        if move dir (wordLength - 1) (y, x) |> positionExists wordSearch then
+            [| for d = 0 to wordLength - 1 do 
+                let (y, x) = move dir d (y, x)
+                wordSearch[y, x] |]
+            |> String ]
 
 let part1 () =
-    let allPositions = 
-        [ for y = 0 to Array2D.length1 wordSearch - 1 do
-            for x = 0 to Array2D.length2 wordSearch - 1 do
-                [ y, x ] ]
-    searchWord wordSearch (Seq.toList "XMAS") allPositions
-    // |> List.length
+    [ for y = 0 to Array2D.length1 wordSearch - 1 do
+        for x = 0 to Array2D.length2 wordSearch - 1 do
+            (y, x) ]
+    |> List.collect (wordsFromPosition 4 wordSearch)
+    |> List.filter (fun w -> w = "XMAS")
+    |> List.length
 
 printfn "Part 1: %A" (part1 ())

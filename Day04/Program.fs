@@ -35,3 +35,19 @@ let part1 () =
     |> List.length
 
 printfn "Part 1: %A" (part1 ())
+
+let isXMas wordSearch (aY, aX) =
+    0 < aY && aY < Array2D.length1 wordSearch - 1 &&
+    0 < aX && aX < Array2D.length2 wordSearch - 1 &&
+    wordSearch[aY, aX] = 'A' &&
+    (wordSearch[aY-1, aX-1] = 'M' && wordSearch[aY+1, aX+1] = 'S' || wordSearch[aY-1, aX-1] = 'S' && wordSearch[aY+1, aX+1] = 'M') &&
+    (wordSearch[aY-1, aX+1] = 'M' && wordSearch[aY+1, aX-1] = 'S' || wordSearch[aY-1, aX+1] = 'S' && wordSearch[aY+1, aX-1] = 'M')
+
+let part2 () =
+    [ for y = 1 to Array2D.length1 wordSearch - 2 do
+        for x = 1 to Array2D.length2 wordSearch - 2 do
+            if isXMas wordSearch (y, x) then
+                1 ]
+    |> List.sum
+
+printfn "Part 2: %A" (part2 ())

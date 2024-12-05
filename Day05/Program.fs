@@ -43,3 +43,14 @@ let part1 () =
     |> Array.sumBy (fun update -> update[Array.length update / 2])
 
 printfn "Part 1: %A" (part1 ())
+
+let part2 () =
+    updates
+    |> Array.choose (fun update ->
+        let sorted = Array.sortWith (compare rules) update
+        if update <> sorted
+        then Some sorted
+        else None)
+    |> Array.sumBy (fun update -> update[Array.length update / 2])
+
+printfn "Part 2: %A" (part2 ())

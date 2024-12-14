@@ -44,3 +44,13 @@ let part1 () =
     |> List.sum
 
 printfn "Part 1: %A" (part1 ())
+
+let part2 () =
+    trailheads
+    |> List.map (fun trailhead ->
+        dfs (neighbours topoMap) (isPeak topoMap) trailhead
+        |> List.length
+    )
+    |> List.sum
+
+printfn "Part 2: %A" (part2 ())

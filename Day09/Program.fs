@@ -4,37 +4,6 @@ let diskMap =
     File.ReadAllText("input.txt").Trim().ToCharArray()
     |> Array.map (fun ch -> int ch - int '0')
 
-let fileCount = (diskMap.Length + 1) / 2
-
-let part1Smart () =
-    Seq.init (Array.sum diskMap) bigint
-    |> Seq.mapFold (fun (dmFrontIndex, dmFrontInIndex, dmBackIndex, dmBackInIndex) i ->
-        let fileId =            
-            if dmFrontIndex % 2 = 0 
-            then dmFrontIndex / 2
-            else dmBackIndex / 2
-        if dmFrontIndex < dmBackIndex then
-            let dmFrontIndex', dmFrontInIndex' = 
-                if dmFrontInIndex < diskMap[dmFrontIndex] - 1
-                then dmFrontIndex, dmFrontInIndex + 1
-                else dmFrontIndex + 1, 0
-            let dmBackIndex', dmBackInIndex' =
-                if dmFrontIndex % 2 = 0 then
-                    dmBackIndex, dmBackInIndex
-                else
-                    if dmBackInIndex < diskMap[dmBackIndex] - 1
-                    then dmBackIndex, dmBackInIndex + 1
-                    else dmBackIndex - 2, 0
-            Some (i * bigint fileId), (dmFrontIndex', dmFrontInIndex', dmBackIndex', dmBackInIndex')
-        elif dmFrontIndex = dmBackIndex && dmBackInIndex < diskMap[dmBackIndex] then
-            Some (i * bigint fileId), (dmFrontIndex, dmFrontInIndex, dmBackIndex, dmBackInIndex + 1)
-        else None, (dmFrontIndex, dmFrontInIndex, dmBackIndex, dmBackInIndex)
-    ) (0, 0, diskMap.Length - 1, 0)
-    |> fst
-    |> Seq.takeWhile (Option.isSome)
-    |> Seq.choose id
-    |> Seq.sum
-
 let compact disk =
     let disk = Array.copy disk
     for i = 0 to Array.length disk - 1 do
@@ -55,4 +24,53 @@ let part1 () =
     |> Seq.indexed
     |> Seq.sumBy (fun (i, d) -> bigint (i * ValueOption.defaultValue 0 d))
 
-printfn "Part 1: %A" (part1 ())
+// printfn "Part 1: %A" (part1 ())
+
+let diskFileMap =
+    diskMap
+    |> Array.indexed
+    |> Array.map (fun (i, len) ->
+        let file = if i % 2 = 0 then ValueSome (i / 2) else ValueNone
+        file, len
+    )
+
+let compactFile i (diskFileMap: (int voption * int) array) =
+    let file, len = diskFileMap[i]
+    if ValueOption.isSome file then
+        let insert = Array.tryFindIndex (fun (f, l) -> f = ValueNone && l >= len) diskFileMap
+        match insert with
+        | Some index when index < i ->
+            if snd diskFileMap[index] = len then
+                let res = Array.copy diskFileMap
+                res[index] <- (file, len)
+                res[i] <- (ValueNone, len)
+                res
+            else
+                let res = Array.insertAt index diskFileMap[i] diskFileMap
+                res[index + 1] <- (ValueNone, snd res[index + 1] - len)
+                res[i + 1] <- (ValueNone, len)
+                res
+        | _ ->
+            diskFileMap
+    else
+        diskFileMap
+
+let compactDisk diskFileMap =
+    let mutable diskFileMap = diskFileMap
+    for i = Array.length diskFileMap - 1 downto 0 do
+        diskFileMap <- compactFile i diskFileMap
+    diskFileMap
+
+let part2 () =
+    compactDisk diskFileMap
+    |> Array.fold (fun (index, sum) (file, len) ->
+        match file with
+        | ValueNone ->
+            (index + len, sum)
+        | ValueSome fileId ->
+            let sum' = List.sum [ for i in index .. index + len - 1 -> bigint i * bigint fileId ]
+            (index + len, sum + sum')
+    ) (0, bigint 0)
+    |> snd
+
+printfn "Part 2: %A" (part2 ())

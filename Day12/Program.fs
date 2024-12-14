@@ -52,3 +52,32 @@ let part1 () =
     |> List.sumBy (fun region -> area region * perimeter (neighbours garden) region)
 
 printfn "Part 1: %A" (part1 ())
+
+let fences neighbours (y, x) =
+    let nonNeighbours = 
+        set [ (y - 1, x); (y + 1, x); (y, x - 1); (y, x + 1) ]
+        - neighbours (y, x)
+    nonNeighbours 
+    |> Set.map (fun (ny, nx) -> (ny - y, nx - x))
+
+let sides neighbours region =
+    region 
+    |> Seq.collect (fun plot -> 
+        fences neighbours plot
+        |> Set.map (fun fence -> fence, plot)
+    )
+    |> Seq.toList
+    |> List.groupBy fst
+    |> List.sumBy (fun (_, lst) -> 
+        let plots = List.map snd lst |> Set.ofList
+        regions (neighbours >> Set.intersect plots) plots
+        |> List.length
+    )
+
+let part2 () =
+    regions (neighbours garden) gardenPlots
+    |> List.sumBy (fun region -> 
+        area region * sides (neighbours garden) region
+    )
+
+printfn "Part2: %A" (part2 ())

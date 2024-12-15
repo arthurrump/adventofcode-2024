@@ -31,6 +31,9 @@ let moves =
 let move (dy, dx) (y, x) =
     (y + dy, x + dx)
 
+let left = move (0, -1)
+let right = move (0, 1)
+
 let moveRobot map dir =
     let rec mkMove initial pos dir =
         let next = move dir pos
@@ -53,3 +56,51 @@ let part1 () =
     movedMap.Boxes |> Seq.sumBy (fun (y, x) -> 100 * y + x)
 
 printfn "Part 1: %A" (part1 ())
+
+let widen map =
+    let doubleX (y, x) = y, x * 2
+    { Robot = doubleX map.Robot
+      Boxes = map.Boxes |> Set.map doubleX
+      Walls = map.Walls |> Set.map doubleX }
+
+let push pos dir colSet =
+    let nextPos = move dir pos
+    match dir with
+    | (0, -1) ->
+        assert not (colSet |> Set.contains nextPos)
+        if colSet |> Set.contains (left nextPos)
+        then Set.singleton (left nextPos), Set.singleton (left nextPos)
+        else Set.empty, Set.empty
+    | (0, 1) ->
+        if colSet |> Set.contains nextPos
+        then Set.singleton nextPos, Set.singleton (right nextPos)
+        else Set.empty, Set.empty
+    | (_, 0) ->
+        if colSet |> Set.contains nextPos
+        then Set.singleton nextPos, set [ nextPos; right nextPos ]
+        elif colSet |> Set.contains (left nextPos)
+        then Set.singleton (left nextPos), set [ left nextPos; nextPos ]
+        else Set.empty, Set.empty
+
+let widenedMoveRobot map dir =
+    let rec mkMove pushed frontier dir =
+        if Set.isEmpty frontier then
+            let moved = pushed |> Set.map (move dir)
+            { map with 
+                Robot = move dir map.Robot
+                Boxes = map.Boxes - pushed + moved }
+        else
+            let next = Set.minElement frontier
+            let frontier = Set.remove next frontier
+            if not (Set.isEmpty (fst (push next dir map.Walls))) then
+                map
+            else
+                let pushed', frontier' = push next dir map.Boxes
+                mkMove (pushed + pushed') (frontier + frontier') dir
+    mkMove Set.empty (Set.singleton map.Robot) dir
+
+let part2 () =
+    let movedMap = moves |> Array.fold widenedMoveRobot (widen map)
+    movedMap.Boxes |> Seq.sumBy (fun (y, x) -> 100 * y + x)
+
+printfn "Part 2: %A" (part2 ())

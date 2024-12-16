@@ -68,8 +68,46 @@ let dijkstra start isDest neighbours cost =
                 
     distances[current], List.rev (current::paths[current])
 
-let part1 () =
+let shortestPathLength =
     dijkstra (start map) (isDest map) (neighbours map) cost
     |> fst
 
+let part1 () = shortestPathLength
+
 printfn "Part 1: %A" (part1 ())
+
+let pathsUnderCost start isDest neighbours cost maxCost =
+    let rec walk (found: Set<'a list>) (frontier: Set<int * 'a list>) =
+        if Set.isEmpty frontier then
+            found
+        else
+            let pathCost, current::path = Set.minElement frontier
+            let frontier = Set.remove (pathCost, current::path) frontier
+            
+            let viableNeighbours = 
+                neighbours current
+                |> Set.filter (fun n -> pathCost + cost current n <= maxCost)
+            let dests, nexts =
+                Set.partition isDest viableNeighbours
+            let found =
+                Set.map (fun n -> n::current::path) dests
+                |> Set.union found
+            let frontier =
+                Set.map (fun n -> pathCost + cost current n, n::current::path) nexts
+                |> Set.union frontier
+
+            walk found frontier
+    
+    walk Set.empty (Set.singleton (0, [ start ]))
+
+let part2 () =
+    pathsUnderCost (start map) (isDest map) (neighbours map) cost shortestPathLength
+    |> Seq.map (fun path -> 
+        path 
+        |> List.map (fun (y, x, _) -> (y, x)) 
+        |> Set.ofList
+    )
+    |> Set.unionMany
+    |> Set.count
+
+printfn "Part 2: %A" (part2 ())

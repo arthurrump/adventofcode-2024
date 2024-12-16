@@ -68,45 +68,47 @@ let dijkstra start isDest neighbours cost =
                 
     distances[current], List.rev (current::paths[current])
 
-let shortestPathLength =
+let part1 () =
     dijkstra (start map) (isDest map) (neighbours map) cost
     |> fst
 
-let part1 () = shortestPathLength
-
 printfn "Part 1: %A" (part1 ())
 
-let pathsUnderCost start isDest neighbours cost maxCost =
-    let rec walk (found: Set<'a list>) (frontier: Set<int * 'a list>) =
-        if Set.isEmpty frontier then
-            found
-        else
-            let pathCost, current::path = Set.minElement frontier
-            let frontier = Set.remove (pathCost, current::path) frontier
-            
-            let viableNeighbours = 
-                neighbours current
-                |> Set.filter (fun n -> pathCost + cost current n <= maxCost)
-            let dests, nexts =
-                Set.partition isDest viableNeighbours
-            let found =
-                Set.map (fun n -> n::current::path) dests
-                |> Set.union found
-            let frontier =
-                Set.map (fun n -> pathCost + cost current n, n::current::path) nexts
-                |> Set.union frontier
+let dijkstraAll start isDest neighbours cost =
+    let unvisited = PriorityQueue<'n, int>()
+    unvisited.Enqueue(start, 0)
+    let distances = Dictionary<'n, int>()
+    distances.Add(start, 0)
+    let paths = Dictionary<'n, Set<'n list>>()
+    paths.Add(start, Set.singleton [])
+    let mutable current = start
 
-            walk found frontier
-    
-    walk Set.empty (Set.singleton (0, [ start ]))
+    while not (isDest current) do
+        current <- unvisited.Dequeue()
+        let dist = distances[current]
+        for neighbour in neighbours current do
+            let dist = dist + cost current neighbour
+            match distances.TryGetValue(neighbour) with
+            | true, d ->
+                if dist < d then
+                    distances[neighbour] <- dist
+                    paths[neighbour] <- Set.map (fun p -> current::p) paths[current]
+                    unvisited.Enqueue(neighbour, dist)
+                elif dist = d then
+                    let foundPaths = paths.GetValueOrDefault(neighbour, Set.empty)
+                    paths[neighbour] <- Set.union (Set.map (fun p -> current::p) paths[current]) foundPaths
+                    unvisited.Enqueue(neighbour, dist)
+            | false, _ ->
+                distances[neighbour] <- dist
+                paths[neighbour] <- Set.map (fun p -> current::p) paths[current]
+                unvisited.Enqueue(neighbour, dist)
+                
+    distances[current], paths[current] |> Set.map (fun path -> List.rev (current::path))
 
 let part2 () =
-    pathsUnderCost (start map) (isDest map) (neighbours map) cost shortestPathLength
-    |> Seq.map (fun path -> 
-        path 
-        |> List.map (fun (y, x, _) -> (y, x)) 
-        |> Set.ofList
-    )
+    dijkstraAll (start map) (isDest map) (neighbours map) cost
+    |> snd
+    |> Seq.map (List.map (fun (y, x, _) -> (y, x)) >> Set.ofList)
     |> Set.unionMany
     |> Set.count
 
